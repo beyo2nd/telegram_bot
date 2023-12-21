@@ -10,6 +10,7 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher.storage import FSMContext
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 
+
 from userid_database import SQLDatabase
 
 from datetime import datetime, timedelta
@@ -26,7 +27,7 @@ from datetime import datetime, timedelta
 
 #Инициализируем бота
 bot = Bot(token = config.bot_token)
-dp = Dispatcher(bot)
+dp = Dispatcher(bot, storage=MemoryStorage())
 status = True
 
 #Инициализация базы данных
@@ -36,35 +37,46 @@ db = SQLDatabase('userid_db.db')
 
 #Клавиатуры --------------------------------------------------------------------------------
 
-#1 клавиатура FIGHTERS
-fighters_keyboard = InlineKeyboardMarkup()
-button1 = InlineKeyboardButton("Байра ba1raa_")
-button2 = InlineKeyboardButton("Ислам «Джанго» Жангоразов")
-button3 = InlineKeyboardButton("Шамиль «Пахан» Галимов")
-button4 = InlineKeyboardButton("Артем Тарасов")
-button5 = InlineKeyboardButton("Марат «Даггер» Исаев")
-button6 = InlineKeyboardButton("Даниял «Т-34» Эльбаев")
-fighters_keyboard.add(button1,button2,button3,button4,button5,button6)
-
-#2 клавиатура VIP STANDARD
+#1 клавиатура VIP STANDARD
 ticket_keyboard = InlineKeyboardMarkup()
-button7 = InlineKeyboardButton('Купить VIP билет', url="https://google.com")
-button8 = InlineKeyboardButton('Купить STANDARD билет', url="https://google.com")
+button1 = InlineKeyboardButton('Купить VIP билет', url="https://google.com")
+button2 = InlineKeyboardButton('Купить STANDARD билет', url="https://google.com")
 ticket_keyboard.add(button1, button2)
 
-#3 клавиатура STANDARD
+#2 клавиатура STANDARD
 standard_keyboard = InlineKeyboardMarkup()
-standard_keyboard.add(button8)
+standard_keyboard.add(button2)
 
-#4 клавиатура VIP
+#3 клавиатура VIP
 vip_keyboard = InlineKeyboardMarkup()
-vip_keyboard.add(button7)
+vip_keyboard.add(button1)
 
 #4 клавиатура стать победителем
 bethewinner_keyboard = InlineKeyboardMarkup()
-button9 = InlineKeyboardButton('Стать победителем', callback_data = 'bethewinner')
-bethewinner_keyboard.add(button9)
-#Клавиатуры --------------------------------------------------------------------------------
+button3 = InlineKeyboardButton('Стать победителем', callback_data = 'bethewinner')
+bethewinner_keyboard.add(button3)
+
+#5 клавиатура узнать детальнее
+more_info_keyboard = InlineKeyboardMarkup()
+button4 = InlineKeyboardButton('Узнать детальнее', callback_data ='more_info')
+more_info_keyboard.add(button4)
+
+#6 Клавиатура узнать про призы
+know_about_prizes_keyboard = InlineKeyboardMarkup()
+button5 = InlineKeyboardButton('Узнать про призы', callback_data = 'know_about_prizes')
+know_about_prizes_keyboard.add(button5)
+
+# Клавиатура выбрать
+choose_keyboard = InlineKeyboardMarkup()
+button6 = InlineKeyboardButton('Выбрать', callback_data = 'choose')
+choose_keyboard.add(button6)
+
+# Клавиатура ошибка фио
+fail_keyboard = InlineKeyboardMarkup()
+button7 = InlineKeyboardButton('Ввести заново', callback_data = 'bethewinner')
+bethewinner_keyboard.add(button7)
+
+#Клавиатуры--------------------------------------------------------------------------------
 
 #Айди админа
 admin_id = 366254199
@@ -81,18 +93,45 @@ async def on_startup(dp):
     
 #Вебхук-------------------------------------------------------------------------------------
 
-@dp.message_handler(state = user_add_username)
-async def name_add(message: types.Message):
-    db.add_name(message.text, message.from_user.id)
-    await bot.send_message(message_chat_id, config.third_text, parse_mode=ParseMode.MARKDOWN)
-@dp.message_handler(state = user_add_phone_number)
-async def phone_number_add(message: types.Message):
-    db.add_phone_number(message.text, message.from_user.id)
-    await bot.send_message(message_chat_id, config.fourth_text, parse_mode=ParseMode.MARKDOWN)
-@dp.message_handler(state = user_add_telegram_id)
-async def telegram_id_add(message: types.Message):
+#Регистрация пользователя-------------------------------------------------------------------
+class user_add(StatesGroup):
+    name = State()
+    phone_number = State()
+    telegram_id = State()
+
+#Добавить ФИО
+@dp.message_handler(state = user_add.name)
+async def add_name(message: types.Message, state = FSMContext):
+    print("add_name")
+    await state.finish()
+    if len(message.text.split()) <3:
+        await bot.send_message(message.chat.id, "Ошибка\nВведите ФИО в формате:\n Фамилия Имя Отчество", parse_mode=ParseMode.MARKDOWN)
+        await user_add.name.set()
+    else:
+        db.add_name(message.text, message.from_user.id)
+        await bot.send_message(message.chat.id, config.third_text, parse_mode=ParseMode.MARKDOWN)
+        await user_add.phone_number.set()
+
+@dp.message_handler(state = user_add.phone_number)
+async def add_phone_number(message: types.Message, state = FSMContext):
+    print("add_phone")
+    await state.finish()
+    if 11>len(list(message.text)) <17:
+        await bot.send_message(message.chat.id, "Ошибка\nВведите номер в формате:\n 89997776655", parse_mode=ParseMode.MARKDOWN)
+        await user_add.phone_number.set()   
+    else:
+        db.add_phone_number(message.text, message.from_user.id)
+        await bot.send_message(message.chat.id, config.fourth_text, parse_mode=ParseMode.MARKDOWN)
+        await user_add.telegram_id.set()
+    
+@dp.message_handler(state = user_add.telegram_id)
+async def add_telegram_id(message: types.Message, state = FSMContext):
+    print("add_telegram_id")
+    await state.finish()
     db.add_telegram_id(message.text, message.from_user.id)
-    await bot.send_message(message_chat_id, config.fifth_text, reply_markup = fighters_keyboard, parse_mode=ParseMode.MARKDOWN)
+    await bot.send_message(message.chat.id, config.sixth_text, reply_markup = more_info_keyboard, parse_mode = ParseMode.MARKDOWN)
+    
+#Регистрация пользователя-------------------------------------------------------------------
 
 
 
@@ -110,10 +149,36 @@ async def start(message: types.Message):
         print("пользователь добавлен")  
         await bot.send_message(message.from_user.id, config.first_text, reply_markup=bethewinner_keyboard , parse_mode=ParseMode.MARKDOWN)
 
+#bethewinner callback
 @dp.callback_query_handler(text_contains = "bethewinner")
-async def ticketamount(call: CallbackQuery):
+async def bethewinner(call: CallbackQuery):
     message_chat_id = call["from"]["id"]
-    await bot.send_answer(message_chat_id, config.second_text, parse_mode=ParseMode.MARKDOWN)
+    await bot.send_message(message_chat_id, config.second_text, parse_mode=ParseMode.MARKDOWN)
+    await user_add.name.set()
+    
+#more_info callback
+@dp.callback_query_handler(text_contains = "more_info")
+async def more_info(call: CallbackQuery):
+    message_chat_id = call["from"]["id"]
+    await bot.send_message(message_chat_id, config.seventh_text, parse_mode=ParseMode.MARKDOWN)
+    await asyncio.sleep(15)
+    await bot.send_message(message_chat_id, config.eighth_text, reply_markup = know_about_prizes_keyboard,parse_mode = ParseMode.MARKDOWN)
+
+#know_about_prizes callback
+@dp.callback_query_handler(text_contains = "know_about_prizes")
+async def know_about_prizes(call: CallbackQuery):
+    message_chat_id = call["from"]["id"]
+    await bot.send_message(message_chat_id, config.ninth_text, reply_markup = choose_keyboard, parse_mode=ParseMode.MARKDOWN)
+    
+#choose callback
+@dp.callback_query_handler(text_contains = "choose")
+async def choose(call: CallbackQuery):
+    message_chat_id = call["from"]["id"]
+    await bot.send_message(message_chat_id, config.tenth_text, reply_markup = ticket_keyboard, parse_mode=ParseMode.MARKDOWN)
+
+#
+    
+    
     
 
 #Рассылка
@@ -170,7 +235,8 @@ async def main():
     )
 
 if __name__ == "__main__":
-    db.create_tables()
+    db.create_table1()
+    db.create_table2()
     asyncio.run(main())
     
 #Главная функция ---------------------------------------------------------------------------   
