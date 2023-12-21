@@ -23,29 +23,25 @@ class SQLDatabase:
         with self.connection:
             return self.cursor.execute("INSERT INTO `users` (`user_id`, `VIP_ticket`, `STANDART_ticket`, `status`) VALUES(?,?,?,?)", (user_id, 0, 0, status))
     
+    #Добавить имя
+    def add_name(self, name, user_id):
+        with self.connection:
+            return self.cursor.execute("UPDATE `users` SET `username` = ? where `user_id` = ?", (name, user_id));self.connection.commit()
+
+    #Добавить номер телефона
+    def add_phone_number(self, phone_number, user_id):
+        with self.connection:
+            return self.cursor.execute("UPDATE `users` SET `phone_number` = ? where `user_id` = ?", (phone_number, user_id));self.connection.commit()
+
+    #Добавить ID телеграма
+    def add_telegram_id(self, telegram_id, user_id):
+        with self.connection:
+            return self.cursor.execute("UPDATE `users` SET `telegram_id` = ? where `user_id` = ?", (telegram_id, user_id));self.connection.commit()
+
+    
     #Проверка на наличие пользователя в базе      
     def user_exists(self,user_id):
         with self.connection:
-            
-            #если базы данных нет, она создаётся
-            self.cursor.execute(''' CREATE TABLE IF NOT EXISTS users (
-                                    id  INTEGER PRIMARY KEY,
-                                    user_id INTEGER NOT NULL,
-                                    username VARCHAR(255),
-                                    phone_number INTEGER,
-                                    email_address VARCHAR(255),
-                                    VIP_ticket INTEGER,
-                                    STANDART_ticket INTEGER,
-                                    status BOOLEAN  NOT NULL
-                                )
-        ''')
-            self.cursor.execute(''' CREATE TABLE IF NOT EXISTS giveaway (
-                                    id INTEGER PRIMARY KEY,
-                                    user_id INTEGER NOT NULL,
-                                    VIP BOOLEAN,
-                                    STANDART BOOLEAN
-                                )
-        ''')
             result = self.cursor.execute('SELECT * FROM `users` WHERE `user_id` = ?', (user_id,)).fetchall()
             return bool(len(result))
     
@@ -65,7 +61,30 @@ class SQLDatabase:
     def get_tickets(self, user_id):
         with self.connection:
             return self.cursor.execute("SELECT * FROM `users` WHERE `user_id` = ?", (user_id,)).fetchall()
-        
+    
+    # Создать базу данных
+    def create_table1(self):
+        return self.cursor.execute(''' CREATE TABLE IF NOT EXISTS users (
+                                        id  INTEGER PRIMARY KEY,
+                                        user_id INTEGER NOT NULL,
+                                        username VARCHAR(255),
+                                        phone_number INTEGER,
+                                        telegram_id VARCHAR(255),
+                                        VIP_ticket INTEGER,
+                                        STANDART_ticket INTEGER,
+                                        status BOOLEAN  NOT NULL,
+                                        fighter VARCHER(255)
+                                    )
+            ''')
+    def create_table2(self):
+        return self.cursor.execute(''' CREATE TABLE IF NOT EXISTS giveaway (
+                                        id INTEGER PRIMARY KEY,
+                                        user_id INTEGER NOT NULL,
+                                        VIP BOOLEAN,
+                                        STANDART BOOLEAN
+                                    )
+            ''')
+    
     # закрыть соеденение с базой данных
     def close(self):
         self.connection.close()
