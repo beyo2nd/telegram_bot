@@ -1,21 +1,31 @@
 import asyncio
 import logging
 import time
+import config
 
 from aiogram import Bot, Dispatcher, types, executor
 from aiogram.types import ReplyKeyboardRemove, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, ParseMode, CallbackQuery
 from aiogram.utils.markdown import hlink
+from aiogram.dispatcher.filters.state import State, StatesGroup
+from aiogram.dispatcher.storage import FSMContext
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
 
 from userid_database import SQLDatabase
 
 from datetime import datetime, timedelta
 
+# команды:
+#     /start
+#     /othermessage
+#     /sendall
+#     /info
+#     /buyVIP
+#     /buySTANDART
+
 #Константы ---------------------------------------------------------------------------------
 
 #Инициализируем бота
-bot_token = "6412664411:AAG56mTNxcgGOlMOvt5AhNQpO1B0Snlu0lU"
-payments_token = "1832575495:TEST:4048a9aba0971711b1dae3f580b23897e6ece1f521c821378b3d785767f0dd65"
-bot = Bot(token = bot_token)
+bot = Bot(token = config.bot_token)
 dp = Dispatcher(bot)
 status = True
 
@@ -26,35 +36,68 @@ db = SQLDatabase('userid_db.db')
 
 #Клавиатуры --------------------------------------------------------------------------------
 
-#1 клавиатура
-instagram_keyboard = InlineKeyboardMarkup()
-button = InlineKeyboardButton('Instagram', url='https://www.instagram.com/podarok_format?igshid=NGVhN2U2NjQ0Yg==')
-instagram_keyboard.add(button)
+#1 клавиатура FIGHTERS
+fighters_keyboard = InlineKeyboardMarkup()
+button1 = InlineKeyboardButton("Байра ba1raa_")
+button2 = InlineKeyboardButton("Ислам «Джанго» Жангоразов")
+button3 = InlineKeyboardButton("Шамиль «Пахан» Галимов")
+button4 = InlineKeyboardButton("Артем Тарасов")
+button5 = InlineKeyboardButton("Марат «Даггер» Исаев")
+button6 = InlineKeyboardButton("Даниял «Т-34» Эльбаев")
+fighters_keyboard.add(button1,button2,button3,button4,button5,button6)
 
-#2 клавиатура
-info_keyboard = InlineKeyboardMarkup()
-button1 = InlineKeyboardButton('Instagram', url='https://www.instagram.com/podarok_format?igshid=NGVhN2U2NjQ0Yg==')
-button2 = InlineKeyboardButton('Купить VIP билет', url="https://google.com")
-button3 = InlineKeyboardButton('Купить STANDART билет', url="https://google.com")
-button4 = InlineKeyboardButton('Посмотреть количество билетов', callback_data = 'ticket:amount')
-info_keyboard.add(button1, button2, button3, button4)
+#2 клавиатура VIP STANDARD
+ticket_keyboard = InlineKeyboardMarkup()
+button7 = InlineKeyboardButton('Купить VIP билет', url="https://google.com")
+button8 = InlineKeyboardButton('Купить STANDARD билет', url="https://google.com")
+ticket_keyboard.add(button1, button2)
 
+#3 клавиатура STANDARD
+standard_keyboard = InlineKeyboardMarkup()
+standard_keyboard.add(button8)
+
+#4 клавиатура VIP
+vip_keyboard = InlineKeyboardMarkup()
+vip_keyboard.add(button7)
+
+#4 клавиатура стать победителем
+bethewinner_keyboard = InlineKeyboardMarkup()
+button9 = InlineKeyboardButton('Стать победителем', callback_data = 'bethewinner')
+bethewinner_keyboard.add(button9)
 #Клавиатуры --------------------------------------------------------------------------------
 
 #Айди админа
 admin_id = 366254199
 
-#сообщения
-first_text = """*Отлично! Скидка успешно закреплена за тобой. Поздравляем! 🎊🔥 *\n\nТы уже на шаг ближе к тому, чтобы стать владельцем нового Changan UNI-V! *Уже очень скоро ты получишь возможность оплатить билет, по специальным условиям! 🚘*\n\nБлагодарим за доверие и остаемся на связи! 🤝"""
-second_text = """*🎫 НО ЭТО ЕЩЕ НЕ ВСЕ…*\n\nПодписывайся на наш Instagram, где тебя уже ждёт много контента с бойцами POPMMA и блогерами! \n\nТам же можно будет узнать подробнее о других призах и получить приглашение на ивенты, в которых *сможешь увидеться с бойцами - лично!* 🔥🤩\n\nКстати, тут тоже будут появляться экслюзивные кадры, поэтому советуем закрепить этот бот! ⭐️"""
-info_text = """ Инфо текст"""
-othermessage = """"""
-sendall_text = """Сообщение для рассылки"""
-
-
 #Сообщения ---------------------------------------------------------------------------------
 
-#обработка команды start
+#Вебхук-------------------------------------------------------------------------------------
+
+async def on_startup(dp):
+    await bot.set_webhook(congig.URL_APP)
+
+async def on_startup(dp):
+    await bot.delete_webhook()
+    
+#Вебхук-------------------------------------------------------------------------------------
+
+@dp.message_handler(state = user_add_username)
+async def name_add(message: types.Message):
+    db.add_name(message.text, message.from_user.id)
+    await bot.send_message(message_chat_id, config.third_text, parse_mode=ParseMode.MARKDOWN)
+@dp.message_handler(state = user_add_phone_number)
+async def phone_number_add(message: types.Message):
+    db.add_phone_number(message.text, message.from_user.id)
+    await bot.send_message(message_chat_id, config.fourth_text, parse_mode=ParseMode.MARKDOWN)
+@dp.message_handler(state = user_add_telegram_id)
+async def telegram_id_add(message: types.Message):
+    db.add_telegram_id(message.text, message.from_user.id)
+    await bot.send_message(message_chat_id, config.fifth_text, reply_markup = fighters_keyboard, parse_mode=ParseMode.MARKDOWN)
+
+
+
+
+#
 @dp.message_handler(commands = ['start'])
 async def start(message: types.Message):
     if (db.user_exists(message.from_user.id)):
@@ -64,17 +107,14 @@ async def start(message: types.Message):
     else:
         print("пользователь добавляется")
         db.add_user(message.from_user.id)
-        print("пользователь добавлен")
-        with open('images/start_image.jpg', 'rb') as photo:
-            await bot.send_photo(chat_id = message.from_user.id,photo = photo, caption=first_text, parse_mode=ParseMode.MARKDOWN)
-        await asyncio.sleep(120)
-        await bot.send_message(message.from_user.id, text=second_text, reply_markup=instagram_keyboard, parse_mode=ParseMode.MARKDOWN)
+        print("пользователь добавлен")  
+        await bot.send_message(message.from_user.id, config.first_text, reply_markup=bethewinner_keyboard , parse_mode=ParseMode.MARKDOWN)
 
-#Ещё одно сообщение
-@dp.message_handler(commands = ['othermessage'])
-async def othermessage(message: types.Message):
-    with open('images/1moreimage.jpg', 'rb') as photo:
-        await bot.send_photo(chat_id = message.from_user.id,photo = photo, caption=othermessage, parse_mode=ParseMode.MARKDOWN)
+@dp.callback_query_handler(text_contains = "bethewinner")
+async def ticketamount(call: CallbackQuery):
+    message_chat_id = call["from"]["id"]
+    await bot.send_answer(message_chat_id, config.second_text, parse_mode=ParseMode.MARKDOWN)
+    
 
 #Рассылка
 @dp.message_handler(commands = ['sendall'])
@@ -88,11 +128,6 @@ async def send_all(message: types.message):
     else:
         await message.answer('Сообщения отправлены не всем пользователям\nлибо вы не являетесь администратором')
     
-#Обработка команды info
-@dp.message_handler(commands = ['info'])
-async def info(message: types.Message):
-    await bot.send_message(message.from_user.id, text=info_text, reply_markup=info_keyboard, parse_mode=ParseMode.MARKDOWN)
-
 @dp.callback_query_handler(text_contains = "ticket:amount")
 async def ticketamount(call: CallbackQuery):
     message_chat_id = call["from"]["id"]
@@ -110,7 +145,7 @@ async def buyVIP(message: types.message):
     await bot.send_message(message.chat.id, "VIP билет куплен успешно!")
     
 #Получить STANDART билет
-@dp.message_handler(commands = ['buySTANDART'])
+@dp.message_handler(commands = ['buySTANDARВ'])
 async def buyVIP(message: types.message):
     db.add_STANDART_ticket(message.chat.id)
     await bot.send_message(message.chat.id, "Стандартный билет куплен успешно!")
@@ -123,9 +158,19 @@ async def buyVIP(message: types.message):
 async def main():
     logging.basicConfig(level = logging.INFO)
     await dp.start_polling(bot)
-    print(1)
+    await dp.start_webhook(
+        dispatcher = dp,
+        webhook_path = "",
+        on_startup = on_startup,
+        on_shutdown = on_shutdown,
+        skip_updates = True,
+        host = "0.0.0.0",
+        port = int(os.environ.get("PORT",5000)
+        )
+    )
 
 if __name__ == "__main__":
+    db.create_tables()
     asyncio.run(main())
     
 #Главная функция ---------------------------------------------------------------------------   
