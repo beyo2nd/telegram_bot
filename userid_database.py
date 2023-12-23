@@ -21,7 +21,7 @@ class SQLDatabase:
     #Добавить пользователя
     def add_user(self,user_id, status = False):
         with self.connection:
-            return self.cursor.execute("INSERT INTO `users` (`user_id`, `VIP_ticket`, `STANDART_ticket`, `status`) VALUES(?,?,?,?)", (user_id, 0, 0, status))
+            return self.cursor.execute("INSERT INTO `users` (`user_id`, `VIP_ticket`, `STANDARD_ticket`, `status`) VALUES(?,?,?,?)", (user_id, 0, 0, status))
     
     #Добавить имя
     def add_name(self, name, user_id):
@@ -48,14 +48,19 @@ class SQLDatabase:
     # #Добавить вип билет
     def add_VIP_ticket(self,user_id):
         with self.connection:
-            self.cursor.execute("INSERT INTO `giveaway` (`user_id`, `VIP`, `STANDART`) VALUES (?,?,?)", (user_id, 1, 0))
-            return self.cursor.execute("UPDATE `users` SET `VIP_ticket` = `VIP_ticket`+1, status = True WHERE `user_id` = ?", (user_id,))
+            self.cursor.execute("INSERT INTO `giveaway` (`user_id`, `VIP`, `STANDARD`) VALUES (?,?,?)", (user_id, 'VIP ticket', 0))
+            self.cursor.execute("INSERT INTO `giveaway` (`user_id`, `VIP`, `STANDARD`) VALUES (?,?,?)", (user_id, 'VIP copy 1', 0))
+            self.cursor.execute("INSERT INTO `giveaway` (`user_id`, `VIP`, `STANDARD`) VALUES (?,?,?)", (user_id, 'VIP copy 2', 0))
+            self.cursor.execute("UPDATE `users` SET `VIP_ticket` = `VIP_ticket`+1 WHERE `user_id` = ?", (user_id,))
+            self.cursor.execute("UPDATE `users` SET `status` = True WHERE `user_id` = ?", (user_id,))
     
     # #Добавить стандартный билет
-    def add_STANDART_ticket(self,user_id):
+    def add_STANDARD_ticket(self,user_id):
         with self.connection:
-            self.cursor.execute("INSERT INTO `giveaway` (`user_id`, `VIP`, `STANDART`) VALUES (?,?,?)", (user_id, 0, 1))
-            return self.cursor.execute("UPDATE `users` SET `STANDART_ticket` = `STANDART_ticket`+1, status = True WHERE `user_id` = ?", (user_id,))
+            self.cursor.execute("INSERT INTO `giveaway` (`user_id`, `VIP`, `STANDARD`) VALUES (?,?,?)", (user_id, 0, 'STANDARD ticket'))
+            self.cursor.execute("UPDATE `users` SET `STANDARD_ticket` = `STANDARD_ticket`+1 WHERE `user_id` = ?", (user_id,))
+            self.cursor.execute("UPDATE `users` SET `status` = True WHERE `user_id` = ?", (user_id,))
+            
     
     #Просмотреть количество билетов
     def get_tickets(self, user_id):
@@ -71,17 +76,16 @@ class SQLDatabase:
                                         phone_number INTEGER,
                                         telegram_id VARCHAR(255),
                                         VIP_ticket INTEGER,
-                                        STANDART_ticket INTEGER,
+                                        STANDARD_ticket INTEGER,
                                         status BOOLEAN  NOT NULL,
-                                        fighter VARCHER(255)
                                     )
             ''')
     def create_table2(self):
         return self.cursor.execute(''' CREATE TABLE IF NOT EXISTS giveaway (
                                         id INTEGER PRIMARY KEY,
                                         user_id INTEGER NOT NULL,
-                                        VIP BOOLEAN,
-                                        STANDART BOOLEAN
+                                        VIP VARCHAR(255),
+                                        STANDARD VARCHAR(255)
                                     )
             ''')
     
